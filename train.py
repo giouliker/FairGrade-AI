@@ -13,7 +13,9 @@ of this script (never unpickle checkpoints from untrusted sources).
 from __future__ import annotations
 
 import json
+import os
 import pickle
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -26,15 +28,23 @@ from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader, TensorDataset
 from xgboost import XGBClassifier
 
-from data_prep import load_and_preprocess_data
+from data_prep import DATA_PATH, load_and_preprocess_data
+from paths import (
+    BASELINE_MODEL_PATH,
+    FAIR_MODEL_PATH,
+    METRICS_PATH,
+    ensure_models_dir,
+)
 
-# ---------------------------------------------------------------------------
-# Artifact paths (relative to project root — no machine-specific paths)
-# ---------------------------------------------------------------------------
-
-BASELINE_MODEL_PATH = Path("models") / "baseline_model.pkl"
-FAIR_MODEL_PATH = Path("models") / "fair_model.pt"
-METRICS_PATH = Path("models") / "metrics.json"
+# Re-exported for app.py and documentation.
+__all__ = [
+    "BASELINE_MODEL_PATH",
+    "FAIR_MODEL_PATH",
+    "METRICS_PATH",
+    "PassPredictor",
+    "predict_neural_network",
+    "main",
+]
 
 RANDOM_STATE = 42
 TEST_SIZE = 0.2
@@ -50,13 +60,15 @@ XGB_PARAMS = {
     "n_estimators": 100,
     "eval_metric": "logloss",
     "random_state": RANDOM_STATE,
-    "n_jobs": -1,
+    # Single-threaded fit avoids fork/spawn issues on headless hosts (e.g. Streamlit Cloud).
+    "n_jobs": 1,
 }
 
 # Neural network: small MLP suited to ~400 samples and ~20+ features.
 NN_HIDDEN_SIZE = 64
 NN_DROPOUT = 0.2
-NN_EPOCHS = 150
+# Override with NN_EPOCHS env var on slow cloud instances (default tuned for CI/cloud).
+NN_EPOCHS = int(os.environ.get("NN_EPOCHS", "80"))
 NN_BATCH_SIZE = 32
 NN_LEARNING_RATE = 1e-3
 # AdamW weight decay penalizes large weights (L2-style), complementing Dropout.
@@ -218,6 +230,7 @@ def save_baseline_artifact(
     path: Path = BASELINE_MODEL_PATH,
 ) -> None:
     """Save XGBoost model plus feature column order for ``app.py`` inference."""
+    ensure_models_dir()
     artifact = {"model": model, "feature_columns": feature_columns}
     with path.open("wb") as f:
         pickle.dump(artifact, f)
@@ -355,6 +368,7 @@ def save_fair_artifact(
     ``app.py`` reloads ``hidden_size`` and ``dropout`` so architecture matches
     the checkpoint even if hyperparameters change in a future training run.
     """
+    ensure_models_dir()
     torch.save(
         {
             "model_state_dict": model.state_dict(),
@@ -375,13 +389,20 @@ def save_metrics(
     path: Path = METRICS_PATH,
 ) -> None:
     """Write hold-out metrics JSON for the Streamlit dashboard."""
+    ensure_models_dir()
     payload = {"baseline": xgb_metrics, "fair": nn_metrics}
-    path.write_text(json.dumps(payload, indent=2))
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     print(f"Saved metrics to {path}")
 
 
 def main() -> None:
     """Run the full training and evaluation pipeline."""
+    ensure_models_dir()
+    if not DATA_PATH.is_file():
+        print(f"ERROR: Dataset missing at {DATA_PATH}", file=sys.stderr)
+        sys.exit(1)
+
+    # Headless-safe defaults (no GUI backends required).
     X, y, address = load_and_preprocess_data()
     feature_columns = list(X.columns)
 
@@ -413,4 +434,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:
+        print(f"ERROR: Training failed: {exc}", file=sys.stderr)
+        sys.exit(1)

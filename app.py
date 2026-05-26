@@ -14,8 +14,6 @@ from __future__ import annotations
 
 import json
 import pickle
-import subprocess
-from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -29,6 +27,7 @@ from train import (
     NN_DROPOUT,
     NN_HIDDEN_SIZE,
     PassPredictor,
+    main as run_training,
     predict_neural_network,
 )
 
@@ -36,6 +35,14 @@ from train import (
 EDUCATION = ["None", "Primary", "5th–9th grade", "Secondary", "Higher"]
 JOBS = ["at_home", "health", "other", "services", "teacher"]
 REASONS = ["course", "home", "other", "reputation"]
+
+
+def _load_checkpoint(path) -> dict:
+    """Load a PyTorch checkpoint (compatible with older torch versions)."""
+    try:
+        return torch.load(path, map_location="cpu", weights_only=False)
+    except TypeError:
+        return torch.load(path, map_location="cpu")
 
 
 @st.cache_resource
@@ -59,7 +66,7 @@ def load_nn() -> tuple[PassPredictor, object, list[str]]:
     ``weights_only=False`` is required because the checkpoint embeds the
     sklearn scaler object (trusted local artifact only).
     """
-    checkpoint = torch.load(FAIR_MODEL_PATH, map_location="cpu", weights_only=False)
+    checkpoint = _load_checkpoint(FAIR_MODEL_PATH)
     feature_columns: list[str] = checkpoint["feature_columns"]
     model = PassPredictor(
         input_dim=checkpoint.get("input_dim", len(feature_columns)),
@@ -173,14 +180,16 @@ def main() -> None:
         "Location (`address`) is **not** used as a model input."
     )
 
-    # Αν λείπουν τα αρχεία των μοντέλων, τρέξε αυτόματα την εκπαίδευση (ιδανικό για το Streamlit Cloud)
     if not BASELINE_MODEL_PATH.exists() or not FAIR_MODEL_PATH.exists():
-        st.info("Generating machine learning models on the server... Please wait.")
+        st.info("Training models on the server (first run only). This may take a minute.")
         try:
-            subprocess.run(["python", "train.py"], check=True)
-            st.success("Models generated successfully!")
-        except Exception as e:
-            st.error(f"Error during training: {e}")
+            run_training()
+            load_xgb.clear()
+            load_nn.clear()
+            load_metrics.clear()
+            st.success("Models saved to the models/ directory.")
+        except Exception as exc:
+            st.error(f"Training failed: {exc}")
             st.stop()
 
     xgb_model, feature_columns = load_xgb()

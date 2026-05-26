@@ -16,12 +16,10 @@ from pathlib import Path
 
 import pandas as pd
 
-# ---------------------------------------------------------------------------
-# Paths and schema constants (relative to repository root)
-# ---------------------------------------------------------------------------
+from paths import DATA_PATH
 
-# Default location of the UCI student-mat.csv file (semicolon-separated).
-DATA_PATH = Path("data") / "student-mat.csv"
+# Re-export for callers that import DATA_PATH from this module.
+__all__ = ["DATA_PATH", "load_and_preprocess_data", "build_feature_matrix", "align_to_training_columns"]
 
 # Raw numeric columns passed directly to the model after engineering.
 NUMERIC_FEATURES = ["studytime", "failures", "absences", "goout", "Medu", "Fedu"]
@@ -36,7 +34,7 @@ ENGINEERED_FEATURES = ["parent_edu_total", "study_vs_out"]
 PASS_GRADE_THRESHOLD = 10
 
 
-def load_raw_dataframe(path: Path = DATA_PATH) -> pd.DataFrame:
+def load_raw_dataframe(path: Path | None = None) -> pd.DataFrame:
     """
     Load the UCI Student Performance CSV into a pandas DataFrame.
 
@@ -51,7 +49,13 @@ def load_raw_dataframe(path: Path = DATA_PATH) -> pd.DataFrame:
     pd.DataFrame
         Raw records with original column names (e.g. ``G3``, ``address``).
     """
-    return pd.read_csv(path, sep=";")
+    csv_path = DATA_PATH if path is None else path
+    if not csv_path.is_file():
+        raise FileNotFoundError(
+            f"Dataset not found: {csv_path}. "
+            "Ensure data/student-mat.csv is committed to the repository."
+        )
+    return pd.read_csv(csv_path, sep=";")
 
 
 def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -158,7 +162,7 @@ def align_to_training_columns(X: pd.DataFrame, feature_columns: list[str]) -> pd
 
 
 def load_and_preprocess_data(
-    path: Path = DATA_PATH,
+    path: Path | None = None,
 ) -> tuple[pd.DataFrame, pd.Series, pd.Series]:
     """
     End-to-end load: features, binary target, and fairness metadata.
