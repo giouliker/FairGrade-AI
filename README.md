@@ -1,9 +1,10 @@
 # FairGrade AI
 
-**Bias-aware tabular ML demo** — compare a high-performance **XGBoost** baseline with a **regularized PyTorch MLP** on the same student features, and audit **Urban vs. Rural** fairness with **disparate impact**.
+**Bias-aware tabular ML demo** — compare a high-performance **XGBoost**...
 
 Built for learning and portfolio use: transparent feature engineering, held-out fairness metrics, and a simple **Streamlit** UI to explore individual profiles.
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge.svg)](https://fairgrade-ai-qkjkihj6sgjufuwqoaxddh.streamlit.app)
 ---
 
 ## What this project does
