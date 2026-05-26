@@ -38,6 +38,11 @@ REASONS = ["course", "home", "other", "reputation"]
 
 
 @st.cache_resource
+if not BASELINE_MODEL_PATH.exists():
+    import subprocess
+    st.info("Generating machine learning models... Please wait.")
+    subprocess.run(["python", "train.py"], check=True)
+
 def load_xgb() -> tuple[object, list[str]]:
     """
     Load the pickled XGBoost baseline and training feature column names.

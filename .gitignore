@@ -41,9 +41,9 @@ htmlcov/
 .streamlit/secrets.toml
 
 # Training artifacts (regenerate with: python train.py)
-baseline_model.pkl
-fair_model.pt
-metrics.json
+models/*
+
+
 
 # Optional duplicate dataset folders (use data/student-mat.csv)
 student+performance/

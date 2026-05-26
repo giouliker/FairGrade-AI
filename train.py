@@ -32,9 +32,9 @@ from data_prep import load_and_preprocess_data
 # Artifact paths (relative to project root — no machine-specific paths)
 # ---------------------------------------------------------------------------
 
-BASELINE_MODEL_PATH = Path("baseline_model.pkl")
-FAIR_MODEL_PATH = Path("fair_model.pt")
-METRICS_PATH = Path("metrics.json")
+BASELINE_MODEL_PATH = Path("models") / "baseline_model.pkl"
+FAIR_MODEL_PATH = Path("models") / "fair_model.pt"
+METRICS_PATH = Path("models") / "metrics.json"
 
 RANDOM_STATE = 42
 TEST_SIZE = 0.2
