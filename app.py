@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import pickle
+import subprocess
 from pathlib import Path
 
 import pandas as pd
@@ -38,11 +39,6 @@ REASONS = ["course", "home", "other", "reputation"]
 
 
 @st.cache_resource
-if not BASELINE_MODEL_PATH.exists():
-    import subprocess
-    st.info("Generating machine learning models... Please wait.")
-    subprocess.run(["python", "train.py"], check=True)
-
 def load_xgb() -> tuple[object, list[str]]:
     """
     Load the pickled XGBoost baseline and training feature column names.
@@ -177,9 +173,15 @@ def main() -> None:
         "Location (`address`) is **not** used as a model input."
     )
 
+    # Αν λείπουν τα αρχεία των μοντέλων, τρέξε αυτόματα την εκπαίδευση (ιδανικό για το Streamlit Cloud)
     if not BASELINE_MODEL_PATH.exists() or not FAIR_MODEL_PATH.exists():
-        st.error("Models not found. From the project root, run: `python train.py`")
-        st.stop()
+        st.info("Generating machine learning models on the server... Please wait.")
+        try:
+            subprocess.run(["python", "train.py"], check=True)
+            st.success("Models generated successfully!")
+        except Exception as e:
+            st.error(f"Error during training: {e}")
+            st.stop()
 
     xgb_model, feature_columns = load_xgb()
     nn_model, scaler, _ = load_nn()
