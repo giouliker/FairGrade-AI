@@ -162,10 +162,7 @@ Open the URL shown in the terminal (usually `http://localhost:8501`), set sideba
 
 ## License
 
-Add your preferred license (e.g. MIT) before publishing. Dataset terms follow the [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/Student+Performance) usage policy.
+Dataset terms follow the [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/Student+Performance) usage policy.
 
 ---
 
-## Disclaimer
-
-FairGrade AI is an **educational fairness comparison demo**. Predictions must not be used as sole grounds for academic or administrative decisions without human oversight and institutional policy review.
